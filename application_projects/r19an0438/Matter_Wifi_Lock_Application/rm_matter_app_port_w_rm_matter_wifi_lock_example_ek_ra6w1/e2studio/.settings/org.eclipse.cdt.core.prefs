@@ -1,0 +1,6 @@
+eclipse.preferences.version=1
+environment/project/com.renesas.cdt.managedbuild.gnuarm.config.elf.debug.1647461605/ZAP_INSTALL_PATH/delimiter=\:
+environment/project/com.renesas.cdt.managedbuild.gnuarm.config.elf.debug.1647461605/ZAP_INSTALL_PATH/operation=append
+environment/project/com.renesas.cdt.managedbuild.gnuarm.config.elf.debug.1647461605/ZAP_INSTALL_PATH/value=/home/Developer/Downloads/zap-linux-x64
+environment/project/com.renesas.cdt.managedbuild.gnuarm.config.elf.debug.1647461605/append=true
+environment/project/com.renesas.cdt.managedbuild.gnuarm.config.elf.debug.1647461605/appendContributed=true
