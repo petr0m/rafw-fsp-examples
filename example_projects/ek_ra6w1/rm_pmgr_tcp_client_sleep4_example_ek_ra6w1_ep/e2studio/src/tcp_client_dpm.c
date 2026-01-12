@@ -39,8 +39,6 @@
 /*
  * Global variables
  */
-extern uint32_t event;
-extern TaskHandle_t g_app_main_task_handle;
 void tcp_client_dpm_task();
 
 /*
@@ -531,16 +529,6 @@ end_of_task:
 
 static BaseType_t tcp_client_app_task_start(void)
 {
-    g_app_main_task_handle = xTaskGetCurrentTaskHandle();
-    if (RM_PMGR_W_dpm_is_wakeup() == pdFALSE)
-    {
-            while (event != WIFI_EVENT_CONNECTED)
-            {
-                            xTaskNotifyWait(0, 0xFFFFFFFF, &event, portMAX_DELAY);
-            }
-
-    }
-
     return xTaskCreate(tcp_client_dpm_task,
                        JOB_ID_RECV,
                        (TCP_CLIENT_STACK_SIZE),
