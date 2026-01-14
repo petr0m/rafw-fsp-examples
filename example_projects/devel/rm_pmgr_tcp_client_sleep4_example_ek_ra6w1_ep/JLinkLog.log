@@ -1,0 +1,20 @@
+T4AFFDC00 000:006.902   SEGGER J-Link V8.78 Log File
+T4AFFDC00 000:007.038   DLL Compiled: Oct 16 2025 08:35:50
+T4AFFDC00 000:007.043   Logging started @ 2025-11-28 05:42
+T4AFFDC00 000:007.047   Process: /home/developer/.eclipse/com.renesas.platform_201405296/DebugComp/rrq/e2-server-gdb
+T4AFFDC00 000:007.051 - 7.051ms 
+T4AFFDC00 000:007.058 JLINK_GetDLLVersion()
+T4AFFDC00 000:007.061 - 0.004ms returns 87800
+T4AFFDC00 000:007.817 JLINK_OpenEx(...)
+T4AFFDC00 000:010.931   Looking for J-Link GUI Server exe at: ARM/Segger_v8.78.0/JLinkGUIServerExe
+T4AFFDC00 000:011.269   Looking for J-Link GUI Server exe at: /opt/SEGGER/JLink/JLinkGUIServerExe
+T4AFFDC00 000:012.061   Forking J-Link GUI Server: /opt/SEGGER/JLink/JLinkGUIServerExe
+T4AFFDC00 000:060.696   J-Link GUI Server info: "J-Link GUI server V8.16 "
+T4AFFDC00 001:578.451   
+  ***** Error: 
+T4AFFDC00 001:578.471   Cannot connect to J-Link.
+T4AFFDC00 001:578.565 - 1570.749ms returns "Cannot connect to J-Link."
+T4AFFDC00 002:866.560 JLINK_Close()
+T4AFFDC00 002:868.892 - 2.332ms
+T4AFFDC00 002:868.910   
+T4AFFDC00 002:868.914   Closed
