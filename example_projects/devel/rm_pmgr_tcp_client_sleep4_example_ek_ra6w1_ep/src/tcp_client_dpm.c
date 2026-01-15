@@ -37,8 +37,6 @@
 /*
  * Global variables
  */
-extern uint32_t event;
-extern TaskHandle_t g_app_main_task_handle;
 void tcp_client_dpm_task();
 
 /*
@@ -53,9 +51,6 @@ static int g_tcpc_send_cnt = 10000;
 static int g_tcpc_send_cnt = 0;
 #endif
 
-static TaskHandle_t tcp_client_dpm_tasks_ptr = NULL;
-static EventGroupHandle_t tcp_client_mgmt_evt = NULL;
-static bool g_restart_tcp_client_app = false;
 static tcpcl_conf_t tcpcl_conf = {0x00,};
 static bool g_restart_tcp_app_send_timer = false;
 
@@ -286,12 +281,13 @@ static void wait_ready_connect_ipv6()
 
 #endif
 
-void tcp_client_dpm_task()
+void tcp_client_dpm_task(void * pvParams)
 {
     int ret = 0;
     int ip_type = 0;
     int socket_fd = -1;
     int remaining_data = TCPC_REMAIN_DATA_INIT;
+    TaskHandle_t main_task_hdl = (TaskHandle_t) pvParams;
 
     /* socket option */
     int sockopt_reuse = 1;
@@ -316,7 +312,7 @@ void tcp_client_dpm_task()
     if (ret)
     {
         printf("Failed to read TCP client's configuration\n");
-        xEventGroupSetBits(tcp_client_mgmt_evt, EVT_TCPC_EXIT);
+        xTaskkNotify(main_task_hdl, EVT_TCPC_EXIT, eSetBits);
         vTaskDelete(NULL);
     }
 
@@ -454,11 +450,8 @@ void tcp_client_dpm_task()
     }
 
     printf("Connected(%s:%d)\n", tcpcl_conf.peer_ip_addr, tcpcl_conf.peer_port);
-    if (tcp_client_mgmt_evt)
-    {
-        /* Notify the starter task that TCP connection is done */
-        xEventGroupSetBits(tcp_client_mgmt_evt, EVT_TCPC_CONN);
-    }
+    /* Notify the starter task that TCP connection is done */
+    xTaskNotify(main_task_hdl, EVT_TCPC_CONN, eSetBits);
 
     remaining_data = TCPC_REMAIN_DATA_INIT;
     while (1)
@@ -515,11 +508,7 @@ end_of_task:
 
     if (tcpcl_conf.autostart_atexit == pdTRUE)
     {
-        if (tcp_client_mgmt_evt)
-        {
-            xEventGroupSetBits(tcp_client_mgmt_evt, EVT_TCPC_DISCONN);
-        }
-
+        xTaskNotify(main_task_hdl, EVT_TCPC_DISCONN, eSetBits);
     }
 
     vTaskDelete(NULL);
@@ -527,94 +516,12 @@ end_of_task:
     return;
 }
 
-static BaseType_t tcp_client_app_task_start(void)
+BaseType_t tcp_client_app_task_start(TaskHandle_t main_task_id)
 {
-    g_app_main_task_handle = xTaskGetCurrentTaskHandle();
-    if (RM_PMGR_W_dpm_is_wakeup() == pdFALSE)
-    {
-            while (event != WIFI_EVENT_CONNECTED)
-            {
-                            xTaskNotifyWait(0, 0xFFFFFFFF, &event, portMAX_DELAY);
-            }
-
-    }
-
     return xTaskCreate(tcp_client_dpm_task,
                        JOB_ID_RECV,
                        (TCP_CLIENT_STACK_SIZE),
-                       NULL,
+                       (void *) main_task_id,
                        (OS_TASK_PRIORITY_USER + 6),
-                       &tcp_client_dpm_tasks_ptr);
-}
-
-void tcp_client_init()
-{
-#if !defined (__SUPPORT_MATTER_IOT__)
-    EventBits_t events = 0;
-    BaseType_t status = pdPASS;
-
-    /* Event flag group init */
-    if (tcp_client_mgmt_evt == NULL)
-    {
-        tcp_client_mgmt_evt = xEventGroupCreate();
-        if (tcp_client_mgmt_evt == NULL)
-        {
-            printf(RED_COLOR "Event group Create Error!");
-            goto    TCPC_STARTER_END;
-        }
-
-    }
-    status = tcp_client_app_task_start();
-    if (status != pdPASS)
-    {
-        goto TCPC_STARTER_END;
-    }
-
-    while (1)
-    {
-        events = xEventGroupWaitBits(tcp_client_mgmt_evt,
-                                     EVT_TCPC_ANY,
-                                     pdTRUE,
-                                     pdFALSE,
-                                     portMAX_DELAY);
-
-        if (events & EVT_TCPC_DISCONN)
-        {
-            printf("[%s:%d] TCPC restarting ...\n", __func__, __LINE__);
-            g_restart_tcp_client_app = true;
-            status = tcp_client_app_task_start();
-            if (status != pdPASS)
-            {
-                printf("[%s:%d] tcp_client_task_start failed %ld\n", __func__, __LINE__, status);
-                goto TCPC_STARTER_END;
-            }
-
-        }
-        else if (events & EVT_TCPC_CONN)
-        {
-            /* Do nothing */
-        }
-        else if (events & EVT_TCPC_EXIT)
-        {
-            goto TCPC_STARTER_END;
-        }
-        else
-        {
-            printf("Unknown event! %lu \n", events);
-        }
-
-    }
-
-TCPC_STARTER_END:
-    if (tcp_client_mgmt_evt)
-    {
-        vEventGroupDelete(tcp_client_mgmt_evt);
-        tcp_client_mgmt_evt = NULL;
-    }
-
-#endif  // !__SUPPORT_MATTER_IOT__
-
-    vTaskDelete(NULL);
-
-    return;
+                       NULL);
 }
