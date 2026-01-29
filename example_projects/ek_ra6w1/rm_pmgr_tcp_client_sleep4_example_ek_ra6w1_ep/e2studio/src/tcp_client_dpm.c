@@ -514,7 +514,9 @@ end_of_task:
         xTaskNotify(main_task_hdl, EVT_TCPC_DISCONN, eSetBits);
     }
 
+    taskENTER_CRITICAL();
     g_tcp_client_task_handle = NULL;
+    taskEXIT_CRITICAL();
     vTaskDelete(NULL);
 
     return;
@@ -522,23 +524,42 @@ end_of_task:
 
 BaseType_t tcp_client_app_task_start(TaskHandle_t main_task_id)
 {
+    BaseType_t ret;
+    TaskHandle_t temp_handle = NULL;
+
+    /* Use critical section to safely check and update the task handle */
+    taskENTER_CRITICAL();
+    
     /* Check if a previous instance is still running */
     if (g_tcp_client_task_handle != NULL)
     {
         /* Verify the task is actually still valid */
         if (eTaskGetState(g_tcp_client_task_handle) != eDeleted)
         {
+            taskEXIT_CRITICAL();
             APP_PRINT_INFO("TCP client task is already running, skipping restart\n");
             return pdFAIL;
         }
         /* Task was deleted but handle wasn't cleared, reset it */
         g_tcp_client_task_handle = NULL;
     }
+    
+    taskEXIT_CRITICAL();
 
-    return xTaskCreate(tcp_client_dpm_task,
-                       JOB_ID_RECV,
-                       (TCP_CLIENT_STACK_SIZE),
-                       (void *) main_task_id,
-                       (OS_TASK_PRIORITY_USER + 6),
-                       &g_tcp_client_task_handle);
+    ret = xTaskCreate(tcp_client_dpm_task,
+                      JOB_ID_RECV,
+                      (TCP_CLIENT_STACK_SIZE),
+                      (void *) main_task_id,
+                      (OS_TASK_PRIORITY_USER + 6),
+                      &temp_handle);
+    
+    /* Only update the global handle if task creation succeeded */
+    if (ret == pdPASS)
+    {
+        taskENTER_CRITICAL();
+        g_tcp_client_task_handle = temp_handle;
+        taskEXIT_CRITICAL();
+    }
+    
+    return ret;
 }
