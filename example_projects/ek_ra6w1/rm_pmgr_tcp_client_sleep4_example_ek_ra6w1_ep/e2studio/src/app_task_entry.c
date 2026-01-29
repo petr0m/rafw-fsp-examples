@@ -173,6 +173,9 @@ void app_task_entry(void *pvParameters)
             if (is_wifi_iface_up)
             {
                 printf("[%s:%d] TCPC restarting ...\n", __func__, __LINE__);
+                /* Task sends EVT_TCPC_DISCONN before calling vTaskDelete(NULL).
+                 * FreeRTOS will handle cleanup before scheduling the new task.
+                 */
                 BaseType_t status = tcp_client_app_task_start(g_app_main_task_handle, &tcp_client_task_hdl);
                 if (status != pdPASS)
                 {
@@ -215,6 +218,7 @@ void app_task_entry(void *pvParameters)
                 BaseType_t status = tcp_client_app_task_start(g_app_main_task_handle, &tcp_client_task_hdl);
                 if (status != pdPASS)
                 {
+                    tcp_client_task_hdl = NULL;
                     break;
                 }
                 is_tcp_client_running = true;
@@ -224,7 +228,9 @@ void app_task_entry(void *pvParameters)
         {
             printf("WiFi interface down\n");
             is_wifi_iface_up = false;
-            /* WiFi is down, so consider TCP client not running from app perspective */
+            /* WiFi is down, so consider TCP client not running from app perspective.
+             * The task itself will detect the disconnect and terminate, sending EVT_TCPC_DISCONN.
+             */
             is_tcp_client_running = false;
             tcp_client_task_hdl = NULL;
         }
