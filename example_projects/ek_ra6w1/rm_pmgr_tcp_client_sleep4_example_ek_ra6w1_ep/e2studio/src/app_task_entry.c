@@ -39,12 +39,12 @@ uint32_t event = EVENT_VAL;
 #if !CFG_CLI
 WIFINetworkParams_t net_params =
  {
-     .ucChannel                  = CHANNEL,
+    .ucChannel                  = CHANNEL,
     .xPassword.xWPA.cPassphrase = PASSPHRASE,
     .ucSSID                     = SSID,
     .xPassword.xWPA.ucLength    = PASSS_LEN,
     .ucSSIDLength               = SSID_LEN,
-     .xSecurity                  = eWiFiSecurityWPA2,
+    .xSecurity                  = eWiFiSecurityWPA2,
  };
 #endif
 
@@ -60,19 +60,35 @@ WIFINetworkParams_t net_params =
  */
 static void netif_status_callback(struct netif *p_netif)
 {
-
-    /* Check interface is up and have ip assigned */
-    if (netif_is_up(p_netif) && !ip_addr_isany_val(p_netif->ip_addr))
+    /* Check interface is up */
+    if (netif_is_up(p_netif))
     {
-        APP_PRINT_INFO("IP assigned: %s\n", ipaddr_ntoa(&p_netif->ip_addr));
-#if CFG_PMGR
-        WIFI_SetListenInterval(10);
-        WIFI_SetPsMode(true);
-        APP_PRINT_INFO("Sleep 4 enabled\n");
-#endif //CFG_PMGR
-        xTaskNotify(g_app_main_task_handle, WIFI_EVENT_CONNECTED, eSetBits);
+        /* Check interface has ip assigned */
+        if (!ip_addr_isany_val(p_netif->ip_addr))
+        {
+            printf("IP assigned: %s\n", ipaddr_ntoa(&p_netif->ip_addr));
+            xTaskNotify(g_app_main_task_handle, EVT_WIFI_CONNECTED, eSetBits);
+        }
     }
+    else
+    {
+        xTaskNotify(g_app_main_task_handle, EVT_WIFI_DISCONNECTED, eSetBits);
+    }
+}
 
+/**
+ ****************************************************************************************
+ * @brief configure and enable power save mode
+ * @return None
+ ****************************************************************************************
+ */
+static inline void app_configure_ps_mode(void)
+{
+#if CFG_PMGR
+    WIFI_SetListenInterval(10);
+    WIFI_SetPsMode(true);
+    printf("Sleep 4 enabled\n");
+#endif //CFG_PMGR
 }
 
 /* New Thread entry function */
@@ -81,6 +97,8 @@ void app_task_entry(void *pvParameters)
 {
     FSP_PARAMETER_NOT_USED (pvParameters);
     print_ep_info_banner(EP_APP_MODULE_NAME, _STRINGFY(EP_APP_VERSION), EP_APP_DESCRIPTION);
+
+    g_app_main_task_handle = xTaskGetCurrentTaskHandle();
 
 #if CFG_WIFI
  #if TC_WIFI_ON_DPM
@@ -114,8 +132,8 @@ void app_task_entry(void *pvParameters)
     RM_MAP_PERSISTANT_W_Open(&g_map_persistant_w_ctrl);
 #endif
 
-    WIFI_On();
     netif_set_status_callback(netif_default, netif_status_callback);
+    WIFI_On();
 #if defined(__SUPPORT_FACTORY_RESET_BTN__)
 
     /* Create gpio handler event */
@@ -138,24 +156,73 @@ void app_task_entry(void *pvParameters)
 #endif // __SUPPORT_APP_CONSOLE_INPUT__
 
 #endif // CFG_CLI
-    /* tcp_client task */
-    tcp_client_init();
 
-    xTaskNotifyWait(0x00, 0xFFFFFFFF, &event, portMAX_DELAY);
-    switch (event)
+    static bool is_tcp_client_running = false;
+    static bool is_wifi_iface_up = false;
+
+    while (true)
     {
-        case WIFI_EVENT_CONNECTED:
-            APP_PRINT_INFO("WiFi connected\n");
-        break;
+        if (xTaskNotifyWait(0, 0xFFFFFFFF, &event, portMAX_DELAY) != pdPASS)
+        {
+            continue;
+        }
 
-        default:
-            APP_PRINT_INFO("Unexpected event received: %ld\n", event);
-        break;
+        if (event & EVT_TCPC_DISCONN)
+        {
+            if (is_wifi_iface_up)
+            {
+                printf("[%s:%d] TCPC restarting ...\n", __func__, __LINE__);
+                BaseType_t status = tcp_client_app_task_start(g_app_main_task_handle);
+                if (status != pdPASS)
+                {
+                    printf("[%s:%d] tcp_client_task_start failed %ld\n", __func__, __LINE__, status);
+                    is_tcp_client_running = false;
+                }
+                else
+                {
+                    is_tcp_client_running = true;
+                }
+            }
+            else
+            {
+                is_tcp_client_running = false;
+            }
+        }
+        else if (event & EVT_TCPC_CONN)
+        {
+            /* Do nothing */
+        }
+        else if (event & EVT_TCPC_EXIT)
+        {
+            break;
+        }
 
+        if (event & EVT_WIFI_CONNECTED)
+        {
+            printf("WiFi connected\n");
+
+            is_wifi_iface_up = true;
+
+            /* configure power save mode */
+            app_configure_ps_mode();
+
+            if (!is_tcp_client_running)
+            {
+                /* start tcp client task 1st time when network iface is up*/
+                BaseType_t status = tcp_client_app_task_start(g_app_main_task_handle);
+                if (status != pdPASS)
+                {
+                    break;
+                }
+                is_tcp_client_running = true;
+            }
+        }
+        else if (event & EVT_WIFI_DISCONNECTED)
+        {
+            printf("WiFi interface down\n");
+            is_wifi_iface_up = false;
+        }
     }
-
-    while (1)
-        vTaskDelay (portMAX_DELAY);
 
     WIFI_Off();
 }
