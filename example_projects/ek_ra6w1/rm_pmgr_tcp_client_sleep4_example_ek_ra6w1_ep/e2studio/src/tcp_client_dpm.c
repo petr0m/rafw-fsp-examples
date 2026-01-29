@@ -55,6 +55,7 @@ static int g_tcpc_send_cnt = 0;
 
 static tcpcl_conf_t tcpcl_conf = {0x00,};
 static bool g_restart_tcp_app_send_timer = false;
+static TaskHandle_t g_tcp_client_task_handle = NULL;
 
 /*
  * Static functions
@@ -513,6 +514,7 @@ end_of_task:
         xTaskNotify(main_task_hdl, EVT_TCPC_DISCONN, eSetBits);
     }
 
+    g_tcp_client_task_handle = NULL;
     vTaskDelete(NULL);
 
     return;
@@ -520,10 +522,23 @@ end_of_task:
 
 BaseType_t tcp_client_app_task_start(TaskHandle_t main_task_id)
 {
+    /* Check if a previous instance is still running */
+    if (g_tcp_client_task_handle != NULL)
+    {
+        /* Verify the task is actually still valid */
+        if (eTaskGetState(g_tcp_client_task_handle) != eDeleted)
+        {
+            APP_PRINT_INFO("TCP client task is already running, skipping restart\n");
+            return pdFAIL;
+        }
+        /* Task was deleted but handle wasn't cleared, reset it */
+        g_tcp_client_task_handle = NULL;
+    }
+
     return xTaskCreate(tcp_client_dpm_task,
                        JOB_ID_RECV,
                        (TCP_CLIENT_STACK_SIZE),
                        (void *) main_task_id,
                        (OS_TASK_PRIORITY_USER + 6),
-                       NULL);
+                       &g_tcp_client_task_handle);
 }
