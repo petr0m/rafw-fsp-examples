@@ -518,12 +518,12 @@ end_of_task:
     return;
 }
 
-BaseType_t tcp_client_app_task_start(TaskHandle_t main_task_id)
+BaseType_t tcp_client_app_task_start(TaskHandle_t main_task_id, TaskHandle_t *p_tcp_client_task_hdl)
 {
     return xTaskCreate(tcp_client_dpm_task,
                        JOB_ID_RECV,
                        (TCP_CLIENT_STACK_SIZE),
                        (void *) main_task_id,
                        (OS_TASK_PRIORITY_USER + 6),
-                       NULL);
+                       p_tcp_client_task_hdl);
 }

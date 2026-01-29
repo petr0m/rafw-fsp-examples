@@ -159,6 +159,7 @@ void app_task_entry(void *pvParameters)
 
     static bool is_tcp_client_running = false;
     static bool is_wifi_iface_up = false;
+    static TaskHandle_t tcp_client_task_hdl = NULL;
 
     while (true)
     {
@@ -172,11 +173,12 @@ void app_task_entry(void *pvParameters)
             if (is_wifi_iface_up)
             {
                 printf("[%s:%d] TCPC restarting ...\n", __func__, __LINE__);
-                BaseType_t status = tcp_client_app_task_start(g_app_main_task_handle);
+                BaseType_t status = tcp_client_app_task_start(g_app_main_task_handle, &tcp_client_task_hdl);
                 if (status != pdPASS)
                 {
                     printf("[%s:%d] tcp_client_task_start failed %ld\n", __func__, __LINE__, status);
                     is_tcp_client_running = false;
+                    tcp_client_task_hdl = NULL;
                 }
                 else
                 {
@@ -186,6 +188,7 @@ void app_task_entry(void *pvParameters)
             else
             {
                 is_tcp_client_running = false;
+                tcp_client_task_hdl = NULL;
             }
         }
         else if (event & EVT_TCPC_CONN)
@@ -209,7 +212,7 @@ void app_task_entry(void *pvParameters)
             if (!is_tcp_client_running)
             {
                 /* start tcp client task 1st time when network iface is up*/
-                BaseType_t status = tcp_client_app_task_start(g_app_main_task_handle);
+                BaseType_t status = tcp_client_app_task_start(g_app_main_task_handle, &tcp_client_task_hdl);
                 if (status != pdPASS)
                 {
                     break;
@@ -221,6 +224,9 @@ void app_task_entry(void *pvParameters)
         {
             printf("WiFi interface down\n");
             is_wifi_iface_up = false;
+            /* WiFi is down, so consider TCP client not running from app perspective */
+            is_tcp_client_running = false;
+            tcp_client_task_hdl = NULL;
         }
     }
 

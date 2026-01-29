@@ -65,6 +65,6 @@ typedef struct
     int ka_max_probes;
 } tcpcl_conf_t;
 
-BaseType_t tcp_client_app_task_start(TaskHandle_t main_task_hdl);
+BaseType_t tcp_client_app_task_start(TaskHandle_t main_task_hdl, TaskHandle_t *p_tcp_client_task_hdl);
 
 #endif // TCP_CLIENT_DPM_H_
