@@ -45,11 +45,12 @@
 #define EVT_TCPC_CONN             (1UL << (1))
 #define EVT_TCPC_EXIT             (1UL << (2))
 #define EVT_TCPC_ANY              (EVT_TCPC_DISCONN | EVT_TCPC_CONN | EVT_TCPC_EXIT)
+#define EVT_WIFI_CONNECTED        (1UL << (3))
+#define EVT_WIFI_DISCONNECTED     (1UL << (4))
 
-#define WIFI_EVENT_CONNECTED 7
 #define EVENT_VAL -1
 
-typedef struct \
+typedef struct
 {
     char peer_ip_addr[TCPC_PEER_IP_ADDR_LEN];
     int peer_port;
@@ -64,7 +65,6 @@ typedef struct \
     int ka_max_probes;
 } tcpcl_conf_t;
 
-
-void tcp_client_init();
+BaseType_t tcp_client_app_task_start(TaskHandle_t main_task_hdl);
 
 #endif // TCP_CLIENT_DPM_H_
