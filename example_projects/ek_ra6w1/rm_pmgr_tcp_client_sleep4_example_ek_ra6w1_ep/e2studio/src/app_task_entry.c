@@ -132,8 +132,8 @@ void app_task_entry(void *pvParameters)
     RM_MAP_PERSISTANT_W_Open(&g_map_persistant_w_ctrl);
 #endif
 
-    WIFI_On();
     netif_set_status_callback(netif_default, netif_status_callback);
+    WIFI_On();
 #if defined(__SUPPORT_FACTORY_RESET_BTN__)
 
     /* Create gpio handler event */

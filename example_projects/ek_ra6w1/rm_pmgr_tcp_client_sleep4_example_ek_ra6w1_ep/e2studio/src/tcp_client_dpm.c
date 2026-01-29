@@ -259,7 +259,7 @@ static void wait_ready_connect_ipv6()
 
     /* Convert string to workable IPv6 */
     inet_pton(AF_INET6, tcpcl_conf.peer_ip_addr, &peer_in6addr);
-    inet6_addr_to_ip6addr(&peer_ip6addr, &peer_in6addr)
+    inet6_addr_to_ip6addr(&peer_ip6addr, &peer_in6addr);
     if (ip6_addr_isglobal(&peer_ip6addr))
     {
         /* Wait till our own global address becomes valid */
@@ -314,7 +314,7 @@ void tcp_client_dpm_task(void * pvParams)
     if (ret)
     {
         APP_PRINT_INFO("Failed to read TCP client's configuration\n");
-        xTaskkNotify(main_task_hdl, EVT_TCPC_EXIT, eSetBits);
+        xTaskNotify(main_task_hdl, EVT_TCPC_EXIT, eSetBits);
         vTaskDelete(NULL);
     }
 
@@ -359,7 +359,7 @@ void tcp_client_dpm_task(void * pvParams)
     {
         memset(&local_addr6, 0x00, sizeof(struct sockaddr_in6));
         memset(srv_addr6, 0x00, sizeof(struct sockaddr_in6));
-        socket_fd = socket(PF_INET, SOCK_STREAM, 0);
+        socket_fd = socket(PF_INET6, SOCK_STREAM, 0);
 
 
         if (socket_fd < 0)
@@ -481,7 +481,7 @@ void tcp_client_dpm_task(void * pvParams)
             /* NOTE: user application logic for 'DONE (or failure)' case -
                user may want to call send() again if reply does not arrive, if then, add exception handler is required  */
         }
-        len = recv(socket_fd, p_recv_buf, recv_buflen, 0);
+        len = recv(socket_fd, p_recv_buf, recv_buflen - 1, 0);
         if (len > 0)
         {
             p_recv_buf[len] = '\0';
