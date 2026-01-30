@@ -682,7 +682,7 @@ static fsp_err_t provisioning_reboot_station_mode (provisioning_param_t const * 
     if (strlen(p_param->psk) > 0)        // PW
     {
         size_t psk_len = strlen(p_param->psk); /* Cache strlen result */
-        
+
         memset(tmp_psk, 0, PROV_MAX_PW_LEN + 3);
         tmp_psk[0] = 0x22;
         strcpy(&tmp_psk[1], p_param->psk);

@@ -118,6 +118,10 @@ char* getAppThingName(void)
             {
                 app_thing_name = (char*)fleet_prov_name;
             }
+            else
+            {
+                app_thing_name = nvramName;
+            }
         }
         else
         {
