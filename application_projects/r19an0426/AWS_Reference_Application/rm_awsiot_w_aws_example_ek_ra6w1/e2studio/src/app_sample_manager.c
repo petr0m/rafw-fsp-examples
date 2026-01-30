@@ -79,8 +79,7 @@ static char* getMemoryString(const char *string_data)
     strTemp = (char *)pvPortMalloc(strLen + 1);
     if (strTemp != NULL)
     {
-    	memset(strTemp, 0x00, (strLen + 1));
-        strcpy(strTemp, string_data);
+        strcpy(strTemp, string_data); /* strcpy null-terminates, memset unnecessary */
     }
 
     return strTemp;
@@ -112,9 +111,13 @@ char* getAppThingName(void)
     }
     else
     {
-        if (getFleetProvStatus() == 1 && strncmp(nvramName, getFleetProvAppThingName(), strlen(getFleetProvAppThingName())) != 0)
+        if (getFleetProvStatus() == 1)
         {
-            app_thing_name = (char*)getFleetProvAppThingName();
+            const char* fleet_prov_name = getFleetProvAppThingName();
+            if (strncmp(nvramName, fleet_prov_name, strlen(fleet_prov_name)) != 0)
+            {
+                app_thing_name = (char*)fleet_prov_name;
+            }
         }
         else
         {

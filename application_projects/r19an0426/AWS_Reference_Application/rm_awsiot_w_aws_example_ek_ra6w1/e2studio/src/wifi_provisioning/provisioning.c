@@ -289,8 +289,7 @@ fsp_err_t provisioning_reboot_ap_mode(long const ap_mode_flag,
         buffer_size = strlen(char_buffer);
 
         app_thing_name = (char *) pvPortMalloc(buffer_size + 1);
-        memset(app_thing_name, 0x00, buffer_size + 1);
-        strcpy(app_thing_name, char_buffer);
+        strcpy(app_thing_name, char_buffer); /* strcpy null-terminates, memset unnecessary */
     }
 
     if (1 == factory_reset_flag)
@@ -609,8 +608,7 @@ static fsp_err_t provisioning_reboot_station_mode (provisioning_param_t const * 
         buffer_size = strlen(char_buffer);
 
         app_thing_name = (char *) pvPortMalloc(buffer_size + 1);
-        memset(app_thing_name, 0x00, buffer_size + 1);
-        strcpy(app_thing_name, char_buffer);
+        strcpy(app_thing_name, char_buffer); /* strcpy null-terminates, memset unnecessary */
     }
 
     if (1 == factory_reset_flag)
@@ -666,11 +664,12 @@ static fsp_err_t provisioning_reboot_station_mode (provisioning_param_t const * 
     if (strlen(p_param->ssid) > 0)       // SSID
     {
         char tmp_ssid[PROV_MAX_SSID_LEN + 3];
+        size_t ssid_len = strlen(p_param->ssid); /* Cache strlen result */
 
         memset(tmp_ssid, 0, PROV_MAX_SSID_LEN + 3);
         tmp_ssid[0] = 0x22;
         strcpy(&tmp_ssid[1], p_param->ssid);
-        tmp_ssid[strlen(p_param->ssid) + 1] = 0x22;
+        tmp_ssid[ssid_len + 1] = 0x22;
 
 #ifdef RM_MAP_PERSISTANT_W
         RM_MAP_PERSISTANT_W_Write_STRING(RM_MAP_PERSISTANT_W_get_ctrl(),
@@ -682,10 +681,12 @@ static fsp_err_t provisioning_reboot_station_mode (provisioning_param_t const * 
 
     if (strlen(p_param->psk) > 0)        // PW
     {
+        size_t psk_len = strlen(p_param->psk); /* Cache strlen result */
+        
         memset(tmp_psk, 0, PROV_MAX_PW_LEN + 3);
         tmp_psk[0] = 0x22;
         strcpy(&tmp_psk[1], p_param->psk);
-        tmp_psk[strlen(p_param->psk) + 1] = 0x22;
+        tmp_psk[psk_len + 1] = 0x22;
     }
     printf("\n>>> set auth_type : %d \n", p_param->auth_type); // AUTH
     switch (p_param->auth_type)
