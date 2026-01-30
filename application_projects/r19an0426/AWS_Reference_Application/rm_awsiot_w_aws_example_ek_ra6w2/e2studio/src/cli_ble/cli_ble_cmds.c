@@ -180,7 +180,9 @@ bool cmd_ble_write_public_bd_addr(int argc, char *argv[])
         return false;
     }
 
-    for (uint32_t i = 0; i < strlen(argv[1]); i++)
+    size_t addr_len = strlen(argv[1]); /* Cache strlen result to avoid recalculation in loop */
+
+    for (uint32_t i = 0; i < addr_len; i++)
     {
         if (in_bd_addr[i] == ':')
         {
